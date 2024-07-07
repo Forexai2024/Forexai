@@ -1,0 +1,17 @@
+{
+  "name": "forex-prediction-api",
+  "version": "1.0.0",
+  "description": "Forex prediction API using TensorFlow.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "axios": "^0.21.1",
+    "@tensorflow/tfjs": "^3.9.0"
+  },
+  "engines": {
+    "node": "14.x"
+  }
+}
