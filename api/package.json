@@ -1,13 +1,15 @@
 {
-  "name": "forexai",
+  "name": "forex-trading-app",
   "version": "1.0.0",
-  "main": "api/index.js",
+  "description": "Advanced Forex Trading System",
+  "main": "index.js", // Entry point for your Node.js application
   "scripts": {
-    "start": "node api/index.js"
+    "start": "node index.js" // Command to start your application
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^3.14.0",
-    "axios": "^0.27.2",
-    "express": "^4.17.1"
+    "express": "^4.17.2", // Example dependency
+    "axios": "^0.24.0", // Example dependency
+    "chart.js": "^3.7.0", // Example dependency
+    "@tensorflow/tfjs": "^3.14.0" // Example dependency
   }
 }
