@@ -1,0 +1,13 @@
+{
+  "name": "forexai",
+  "version": "1.0.0",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^3.14.0",
+    "axios": "^0.27.2",
+    "express": "^4.17.1"
+  }
+}
