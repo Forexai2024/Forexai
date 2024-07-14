@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Forex Trading System</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> 
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.14.0/dist/tf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <h1>Forex Trader Pro</h1>
+            <ul>
+                <li><a href="#">Dashboard</a></li>
+                <li><a href="#">Analysis</a></li>
+                <li><a href="#">History</a></li>
+                <li><a href="#">Settings</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main>
+            <div class="chart-container">
+                <h2>Forex Chart</h2>
+                <select id="symbolSelector">
+                    <option value="EUR/USD">EUR/USD</option>
+                    <option value="XAU/USD">XAU/USD</option>
+                    <option value="USD/JPY">USD/JPY</option>
+                    <option value="GBP/USD">GBP/USD</option>
+                    <option value="USD/CHF">USD/CHF</option>
+                    <option value="AUD/USD">AUD/USD</option>
+                    <option value="NZD/USD">NZD/USD</option>
+                </select>
+                <button id="updateButton">Update Data</button>
+                <p id="loading">Loading...</p>
+                <canvas id="forexChart"></canvas>
+            </div>
+            <div class="dashboard">
+                <div class="card">
+                    <h3>Latest Price Info</h3>
+                    <p>Close Price: <span id="closePrice">N/A</span></p>
+                    <p>Change: <span id="change">N/A</span></p>
+                    <p>Percent Change: <span id="percentChange">N/A</span></p>
+                </div>
+                <div class="card">
+                    <h3>AI Prediction</h3>
+                    <p id="aiPrediction">AI Prediction: N/A</p>
+                </div>
+                <div class="card">
+                    <h3>Trade Signal</h3>
+                    <p id="tradeSignal">Trade Signal: N/A</p>
+                </div>
+                <div class="card">
+                    <h3>Risk Management</h3>
+                    <p id="riskManagement">Risk Management: N/A</p>
+                </div>
+            </div>
+        </main>
+        <div class="data-table">
+            <h2>Detailed Forex Data</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody id="forexDataBody">
+                    <!-- Forex data will be inserted here --> 
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script >
+        let model, scaler;
+
+// Load the model and scaler files
+async function loadModelAndScaler() {
+    model = await tf.loadLayersModel('https://firebasestorage.googleapis.com/v0/b/forex-f333c.appspot.com/o/model%2Fmodel.json?alt=media&token=4f116ed1-9bc5-4b97-b9fd-1d5a4f8c67d1'); // Change this URL
+    const response = await axios.get('URL_TO_YOUR_SCALER/scaler.json'); // Change this URL
+    scaler = response.data;
+}
+
+function normalize(value, min, max) {
+    return (value - min) / (max - min);
+}
+
+function denormalize(value, min, max) {
+    return value * (max - min) + min;
+}
+
+async function getAIPrediction(forexData) {
+    const input = forexData.map(entry => normalize(entry.close, scaler.min, scaler.max));
+    const inputTensor = tf.tensor2d([input], [1, input.length, 1]);
+
+    const predictionTensor = model.predict(inputTensor);
+    const predictionArray = await predictionTensor.array();
+
+    const predictedPrices = predictionArray[0].map(price => denormalize(price, scaler.min, scaler.max));
+    return predictedPrices;
+}
+
+// Replace the existing updateForexData function
+async function updateForexData() {
+    try {
+        document.getElementById('loading').style.display = 'block';
+        const symbol = document.getElementById('symbolSelector').value;
+        const forexData = await getLatestForexData(symbol); // Assume this function is defined elsewhere
+        if (forexData.length === 0) return;
+
+        const latest = forexData[forexData.length - 1];
+        document.getElementById('closePrice').textContent = latest.close;
+        document.getElementById('change').textContent = (latest.close - forexData[forexData.length - 2].close).toFixed(4);
+        document.getElementById('percentChange').textContent = ((latest.close / forexData[forexData.length - 2].close - 1) * 100).toFixed(2) + '%';
+
+        drawChart(forexData); // Assume this function is defined elsewhere
+        await storeDataInFirestore(symbol, forexData); // Assume this function is defined elsewhere
+
+        const aiPrediction = await getAIPrediction(forexData);
+        document.getElementById('aiPrediction').textContent = `AI Prediction: ${aiPrediction.join(', ')}`;
+
+        const indicators = calculateIndicators(forexData); // Assume this function is defined elsewhere
+        const tradeSignal = await getTradeSignal(latest.close, aiPrediction, indicators.sma, indicators.rsi, indicators.macdLine, indicators.signalLine); // Assume this function is defined elsewhere
+        document.getElementById('tradeSignal').textContent = `Trade Signal: ${tradeSignal.signal}, Hold for: ${tradeSignal.holdTime}`;
+
+        const riskManagement = getRiskManagement(latest.close, aiPrediction); // Assume this function is defined elsewhere
+        document.getElementById('riskManagement').textContent = `Risk Management: Stop Loss at ${riskManagement.stopLoss}, Take Profit at ${riskManagement.takeProfit}`;
+
+    } catch (error) {
+        console.error('Error updating forex data:', error);
+        alert('Failed to update forex data.');
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+document.getElementById('updateButton').addEventListener('click', updateForexData);
+loadModelAndScaler().then(updateForexData); // Load the model and scaler before the first update
+    </script>
+</body>
+</html>
